@@ -1,35 +1,11 @@
 from random import sample
-import psycopg2
+from app.db import RedditPost
+import datetime
 import praw
 import yaml
 import os
 
 env = os.environ
-
-try:
-    connection = psycopg2.connect(user = env['BIB_DB_USER'],
-            password = env['BIB_DB_PASSWORD'],
-            host = env['BIB_DB_HOST'],
-            port = env['BIB_DB_PORT'],
-            database = env['BIB_DB_NAME'])
-
-    cursor = connection.cursor()
-    # Print PostgreSQL Connection properties
-    print ( connection.get_dsn_parameters(),"\n")
-
-    # Print PostgreSQL version
-    cursor.execute("SELECT version();")
-    record = cursor.fetchone()
-    print("You are connected to - ", record,"\n")
-
-except (Exception, psycopg2.Error) as error :
-    print ("Error while connecting to PostgreSQL", error)
-finally:
-    #closing database connection.
-        if(connection):
-            cursor.close()
-            connection.close()
-            print("PostgreSQL connection is closed")
 
 with open(r'quotes.yaml') as file:
     quotes = yaml.load(file, Loader=yaml.FullLoader)
@@ -50,7 +26,13 @@ def add_comment(comment):
     print(sample(quotes, 1)[0])
 
 for comment in comments:
-    # summarize_comment(comment)
+    posts = RedditPost.select().where(RedditPost.reddit_id == comment.id)
+
+    if posts.count() > 0:
+        print(f"Match {comment.id}")
+    else:
+        print(f"No match {comment.id}")
+        RedditPost.create(reddit_id = comment.id)
 
     if "Rehoboam" in comment.body:
         add_comment(comment)
